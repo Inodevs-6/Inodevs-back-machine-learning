@@ -3,7 +3,7 @@ import pandas as pd
 from sklearn.feature_extraction.text import CountVectorizer
 
 # Seus dados fictícios
-data = pd.read_csv("csv/currriculos.csv", sep=",")
+data = pd.read_csv("csv/scrap.csv", sep=",")
 
 # Criar um DataFrame a partir dos dados fictícios
 df = pd.DataFrame(data)
@@ -39,10 +39,10 @@ for palavra_chave in conhecimentos + habilidades + atitudes:
 df["Classificacao"] = df["Pontuacao_Conhecimentos"] + df["Pontuacao_Habilidades"] + df["Pontuacao_Atitudes"]
 
 # Classificar os candidatos por pontuação total em ordem decrescente
-df_classificado = df.sort_values(by="Classificacao", ascending=False)
+# df_classificado = df.sort_values(by="Classificacao", ascending=False)
 
-# Salvar o resultado em um arquivo CSV com todas as informações
-df_classificado.to_csv("csv/results/1_curriculos_classificados_com_critérios.csv", index=False)
+# # Salvar o resultado em um arquivo CSV com todas as informações
+# df_classificado.to_csv("csv/results/1_curriculos_classificados_com_critérios.csv", index=False)
 
 # Criar um DataFrame com a quantidade total de conhecimento, habilidade e atitude de cada pessoa
 df_total = df[["Nome", "Pontuacao_Conhecimentos", "Pontuacao_Habilidades", "Pontuacao_Atitudes", "Classificacao"]].sort_values(by="Classificacao", ascending=False)
