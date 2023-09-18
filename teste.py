@@ -5,26 +5,26 @@ openai.api_base = "https://interactai.openai.azure.com/"
 openai.api_version = "2023-05-15"
 openai.api_key = "66a6b8c8d3c449d4b53fa75d09b04366"
 
-#user_competence = input("Competencia: ")
+user_competence = input("Competencia: ")
 user_ability = input("Habilidade: ")
-#user_attitudes = input("Atitude: ")
+user_attitude = input("Atitude: ")
 
-#response_competence = openai.ChatCompletion.create(
- #   engine="modelgpt35t",
-  #  messages=[
-   #     {"role": "system", "content": "Melhore com base na competencia do CHA a competencia a seguir para uma descriação melhor da competencia que queremos no profissional (resposta curta): "+user_competence},
-    #]
-#)
+def get_description(topic, user_input):
+    response = openai.ChatCompletion.create(
+        engine="modelgpt35t",
+        messages=[
+            {"role": "system", "content": f"Melhore minha descrição da {topic} que procuro em um profissional com base no tópico - {topic} - do CHA (resposta curta) - Procuro um profissional... : {user_input}"},
+        ]
+    )
+    return response['choices'][0]['message']['content']
 
-response_ability = openai.ChatCompletion.create(
-    engine="modelgpt35t",
-    messages=[
-        {"role": "system", "content": "Melhore o topico - habilidade - do CHA - com a descriação a seguir para uma melhor habilidade do que queremos para nosso profissional (resposta curta): "+user_ability},
-    ]
-)
+competence_description = get_description("competencia", user_competence)
+ability_description = get_description("habilidade", user_ability)
+attitude_description = get_description("atitude", user_attitude)
 
-
-
-#print(response)
-#print(response_competence['choices'][0]['message']['content'])
-print(response_ability['choices'][0]['message']['content'])
+print('---------')
+print(competence_description)
+print('---------')
+print(ability_description)
+print('---------')
+print(attitude_description)
