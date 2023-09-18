@@ -1,0 +1,10 @@
+{% extends 'base_html/base.html' %}
+{% block content %}
+
+<form action="{% url 'teste' %}" method="POST">
+    <input type="text" name="nome">
+    <input type="text" name="idade">
+    <input type="submit" value="Enviar">
+</form>
+
+{% endblock %}
