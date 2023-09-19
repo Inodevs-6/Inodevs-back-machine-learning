@@ -3,7 +3,6 @@ pandas
 ipykernel
 requests
 bs4
-json
 openai
 python-dotenv
 
