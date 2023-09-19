@@ -5,3 +5,5 @@ requests
 bs4
 json
 openai
+
+'Comando para mapear as tabelas de acordo com a conexão feita no settings.py -> python manage.py inspectdb > nome_da_app.models.py'

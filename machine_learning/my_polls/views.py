@@ -8,6 +8,8 @@ from bs4 import BeautifulSoup
 import pandas as pd
 from sklearn.feature_extraction.text import CountVectorizer
 import os
+from dotenv import load_dotenv
+load_dotenv()
 
 
 # Função para recebimento de cargo e nivel para a geração da descrição CHA, salvando-o no banco de dados
@@ -16,14 +18,15 @@ def chatgpt(request):
     openai.api_type = "azure"
     openai.api_base = "https://interactai.openai.azure.com/"
     openai.api_version = "2023-05-15"
-    openai.api_key = '66a6b8c8d3c449d4b53fa75d09b04366'
+    openai.api_key = os.environ['API_KEY']
 
-    if request.method == 'GET':
-        cargo = request.GET.get('cargo')
-        nivel = request.GET.get('nivel')
+    if request.method == 'POST':
+        cargo = json.loads(request.body.decode('utf-8')).get('cargo')
+        nivel = json.loads(request.body.decode('utf-8')).get('nivel')
 
-        if cargo and nivel:
-            nova_descricao = DescricaoCha()
+        print(cargo, nivel)
+        if not (desc_cargo.objects.filter(cargo=cargo) and desc_cargo.objects.filter(nivel=nivel)):
+            nova_descricao = desc_cargo()
             nova_descricao.cargo = cargo
             nova_descricao.nivel = nivel
 
@@ -72,7 +75,7 @@ def chatgpt(request):
 
             chaves = [i for i in descricao_cha['descricao']]
 
-            print('Print das chaves' , descricao_cha['descricao'][chaves[0]])
+            print('Print das chaves' , descricao_cha)
 
             # Conhecimentos, Habilidades e Atitudes
             nova_descricao.conhecimentos = descricao_cha['descricao'][chaves[0]]
@@ -80,7 +83,9 @@ def chatgpt(request):
             nova_descricao.atitudes = descricao_cha['descricao'][chaves[2]]
             nova_descricao.save()
 
-        return HttpResponse('Dados salvos com sucesso e descrição CHA gerada.')
+            return HttpResponse('Dados salvos com sucesso e descrição CHA gerada.')
+        else:
+            return HttpResponse('Erro! A descrição a ser gerada já existe, modifique-a como desejar ou insira um novo cargo/nivel.')
 
     return HttpResponse('Erro! O campo cargo ou nivel não foram corretamente preenchidos.')
 
@@ -131,9 +136,9 @@ def match(request):
     # Criar um DataFrame a partir dos dados fictícios
     df = pd.DataFrame(data)
 
-    if DescricaoCha.objects.filter(cargo='desenvolvedor'):
-        # descricao_chas = DescricaoCha.objects.filter(cargo=request.POST.get('cargo'))
-        descricao_chas = DescricaoCha.objects.filter(cargo='desenvolvedor')
+    if desc_cargo.objects.filter(cargo='DesenvolvedorPython'):
+        # descricao_chas = desc_cargo.objects.filter(cargo=request.POST.get('cargo'))
+        descricao_chas = desc_cargo.objects.filter(cargo='DesenvolvedorPython')
 
         # Itere sobre os objetos recuperados
         for descricao_cha in descricao_chas:
@@ -182,7 +187,7 @@ def match(request):
         df_classificado = df_classificado.head(8)
 
         # Salvar o resultado em um arquivo CSV com todas as informações
-        df_classificado.to_csv("csv/results/1_curriculos_classificados_com_critérios.csv", index=False)
+        df_classificado.to_csv("csv/results/curriculos_classificados_com_critérios.csv", index=False)
 
         # Criar um DataFrame com a quantidade total de conhecimento, habilidade e atitude de cada pessoa
         df_total = df[["Nome", "Pontuacao_Conhecimentos", "Pontuacao_Habilidades", "Pontuacao_Atitudes", "Classificacao"]].sort_values(by="Classificacao", ascending=False)
