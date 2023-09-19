@@ -1,9 +1,9 @@
-Nome,Pontuacao_Conhecimentos,Pontuacao_Habilidades,Pontuacao_Atitudes,Classificacao
-Joao,2,0,0,2
-Maria,2,0,0,2
-Luis,2,0,0,2
-Miguel,2,0,0,2
-Rui,1,0,0,1
-Ana,1,0,0,1
-Carlos,1,0,0,1
-Sofia,1,0,0,1
+Nome,Experiencia,Email,Pontuacao_Conhecimentos,Pontuacao_Habilidades,Pontuacao_Atitudes,Classificacao
+Alexandre,Senior Full Stack Developer,alexandre37@email.com,1,0,0,1
+Rui,Machine Learning Engineer,rui26@email.com,1,0,0,1
+Maria,Sr Python Developer,maria34@email.com,1,0,0,1
+Luis,Sr Python Developer and graduação depuração,luis20@email.com,1,0,0,1
+Ana,Back-End Developer,ana28@email.com,1,0,0,1
+Carlos,Software Engineer and DevOps Specialist,carlos30@email.com,1,0,0,1
+Sofia,UIUX Designer,sofia25@email.com,1,0,0,1
+Pedro,Data Scientist,pedro29@email.com,1,0,0,1

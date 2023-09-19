@@ -25,10 +25,10 @@ def chatgpt(request):
         nivel = json.loads(request.body.decode('utf-8')).get('nivel')
 
         print(cargo, nivel)
-        if not (desc_cargo.objects.filter(cargo=cargo) and desc_cargo.objects.filter(nivel=nivel)):
-            nova_descricao = desc_cargo()
-            nova_descricao.cargo = cargo
-            nova_descricao.nivel = nivel
+        if not (DescCargo.objects.filter(desc_vaga=cargo) and DescCargo.objects.filter(desc_nivel=nivel)):
+            nova_descricao = DescCargo()
+            nova_descricao.desc_vaga = cargo
+            nova_descricao.desc_nivel = nivel
 
             response = openai.ChatCompletion.create(
                         engine="modelgpt35t",
@@ -78,9 +78,9 @@ def chatgpt(request):
             print('Print das chaves' , descricao_cha)
 
             # Conhecimentos, Habilidades e Atitudes
-            nova_descricao.conhecimentos = descricao_cha['descricao'][chaves[0]]
-            nova_descricao.habilidades = descricao_cha['descricao'][chaves[1]]
-            nova_descricao.atitudes = descricao_cha['descricao'][chaves[2]]
+            nova_descricao.desc_conhecimentos = descricao_cha['descricao'][chaves[0]]
+            nova_descricao.desc_habilidades = descricao_cha['descricao'][chaves[1]]
+            nova_descricao.desc_atitudes = descricao_cha['descricao'][chaves[2]]
             nova_descricao.save()
 
             return HttpResponse('Dados salvos com sucesso e descrição CHA gerada.')
@@ -136,20 +136,22 @@ def match(request):
     # Criar um DataFrame a partir dos dados fictícios
     df = pd.DataFrame(data)
 
-    if desc_cargo.objects.filter(cargo='DesenvolvedorPython'):
-        # descricao_chas = desc_cargo.objects.filter(cargo=request.POST.get('cargo'))
-        descricao_chas = desc_cargo.objects.filter(cargo='DesenvolvedorPython')
+    vaga = json.loads(request.body.decode('utf-8')).get('cargo')
+
+    if DescCargo.objects.filter(desc_vaga=vaga):
+        # descricao_chas = DescCargo.objects.filter(cargo=request.POST.get('cargo'))
+        descricao_chas = DescCargo.objects.filter(desc_vaga=vaga)
 
         # Itere sobre os objetos recuperados
         for descricao_cha in descricao_chas:
             # Acesse as colunas individualmente
-            cargo = descricao_cha.cargo
-            nivel = descricao_cha.nivel
+            cargo = descricao_cha.desc_vaga
+            nivel = descricao_cha.desc_nivel
             
             # Conhecimentos, Habilidades e Atitudes
-            conhecimentos = descricao_cha.conhecimentos
-            habilidades = descricao_cha.habilidades
-            atitudes = descricao_cha.atitudes
+            conhecimentos = descricao_cha.desc_conhecimentos
+            habilidades = descricao_cha.desc_habilidades
+            atitudes = descricao_cha.desc_atitudes
             cha = (conhecimentos + habilidades + atitudes).replace('[', '').replace(']', ',').replace("'", '').split(',')
 
             print(f"Cargo: {cargo}, Nível: {nivel}")
@@ -190,11 +192,36 @@ def match(request):
         df_classificado.to_csv("csv/results/curriculos_classificados_com_critérios.csv", index=False)
 
         # Criar um DataFrame com a quantidade total de conhecimento, habilidade e atitude de cada pessoa
-        df_total = df[["Nome", "Pontuacao_Conhecimentos", "Pontuacao_Habilidades", "Pontuacao_Atitudes", "Classificacao"]].sort_values(by="Classificacao", ascending=False)
+        df_total = df[["Nome", "Experiencia", "Email" ,"Pontuacao_Conhecimentos", "Pontuacao_Habilidades", "Pontuacao_Atitudes", "Classificacao"]].sort_values(by="Classificacao", ascending=False)
         df_total = df_total.head(8)
+
+        for index, row in df_total.iterrows():
+            if not (Candidato.objects.filter(cand_contato=row['Email']) and Candidato.objects.filter(cand_cargo=vaga)):
+
+                new_candidato = Candidato()
+                new_candidato.cand_nome = row['Nome']
+                new_candidato.cand_experiencia = row['Experiencia']
+                new_candidato.cand_contato = row['Email']
+                new_candidato.cand_pontos_cha = row['Classificacao']
+                new_candidato.cand_cargo = vaga
+                new_candidato.cand_nivel = nivel
+                new_candidato.save()
+
+                new_cand_desc = DescCargoCandidato()
+                new_cand_desc.cand = (Candidato.objects.get(cand_contato=row['Email'])).cand_id
+                print((Candidato.objects.get(cand_contato=row['Email'])).cand_id)
+                new_cand_desc.desc = (DescCargo.objects.get(desc_vaga=cargo)).desc_id
+                new_cand_desc.save()
+
+                # print(f"O candidato {row['Nome']} foi cadastrado com sucesso")
+
+            else:
+                print(f"O cadastramento do candidato {row['Nome']} não foi concluido, pois possivelmente houveram dados duplicados.")
+
 
         # Salvar o resultado em um arquivo CSV separado
         df_total.to_csv("./csv/results/ranqueamento_por_cha.csv", index=False)
+        
 
         return HttpResponse('O arquivo com a classificação foi gerado com sucesso.')
     
