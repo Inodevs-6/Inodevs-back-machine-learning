@@ -1,55 +1,26 @@
 from django.db import models
 
-
 class Candidato(models.Model):
     cand_id = models.BigAutoField(primary_key=True)
+    cand_nome = models.CharField(max_length=50)
     cand_experiencia = models.TextField()
     cand_contato = models.CharField(max_length=50)
-    cand_nome = models.CharField(max_length=50)
-    cand_pontos_cha = models.IntegerField(blank=True, null=True)
-    cand_cargo = models.CharField(max_length=50)
-    cand_nivel = models.CharField(max_length=50)
 
     class Meta:
         managed = False
         db_table = 'candidato'
 
 
-class DescCargo(models.Model):
-    desc_id = models.BigAutoField(primary_key=True)
-    desc_vaga = models.CharField(max_length=50)
-    desc_nivel = models.CharField(max_length=50)
-    desc_conhecimentos = models.TextField(blank=True, null=True)
-    desc_habilidades = models.TextField(blank=True, null=True)
-    desc_atitudes = models.TextField(blank=True, null=True)
-
-    class Meta:
-        managed = False
-        db_table = 'desc_cargo'
-
-
-class DescCargoCandidato(models.Model):
-    desc = models.OneToOneField(DescCargo, models.DO_NOTHING, primary_key=True)  # The composite primary key (desc_id, cand_id) found, that is not supported. The first column is selected.
+class CandidatoVaga(models.Model):
+    vaga = models.OneToOneField('Vaga', models.DO_NOTHING, primary_key=True)  # The composite primary key (vaga_id, cand_id) found, that is not supported. The first column is selected.
     cand = models.ForeignKey(Candidato, models.DO_NOTHING)
+    cand_vaga_rank = models.IntegerField()
+    cand_vaga_pontos_cha = models.IntegerField()
 
     class Meta:
         managed = False
-        db_table = 'desc_cargo_candidato'
-        unique_together = (('desc', 'cand'),)
-
-
-class DescCargoEdit(models.Model):
-    desc_edit_id = models.BigAutoField(primary_key=True)
-    desc_edit_vaga = models.CharField(max_length=50)
-    desc_edit_nivel = models.CharField(max_length=20)
-    desc_edit_conhecimentos = models.TextField(blank=True, null=True)
-    desc_edit_habilidades = models.TextField(blank=True, null=True)
-    desc_edit_atitudes = models.TextField(blank=True, null=True)
-    emp = models.ForeignKey('Empresa', models.DO_NOTHING)
-
-    class Meta:
-        managed = False
-        db_table = 'desc_cargo_edit'
+        db_table = 'candidato_vaga'
+        unique_together = (('vaga', 'cand'),)
 
 
 class Empresa(models.Model):
@@ -61,3 +32,26 @@ class Empresa(models.Model):
     class Meta:
         managed = False
         db_table = 'empresa'
+
+
+class EmpresaVaga(models.Model):
+    vaga = models.ForeignKey('Vaga', models.DO_NOTHING)
+    emp = models.OneToOneField(Empresa, models.DO_NOTHING, primary_key=True)  # The composite primary key (emp_id, vaga_id) found, that is not supported. The first column is selected.
+
+    class Meta:
+        managed = False
+        db_table = 'empresa_vaga'
+        unique_together = (('emp', 'vaga'),)
+
+
+class Vaga(models.Model):
+    vaga_id = models.BigAutoField(primary_key=True)
+    vaga_nome = models.CharField(max_length=50)
+    vaga_nivel = models.CharField(max_length=50)
+    vaga_conhecimentos = models.TextField(blank=True, null=True)
+    vaga_habilidades = models.TextField(blank=True, null=True)
+    vaga_atitudes = models.TextField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'vaga'

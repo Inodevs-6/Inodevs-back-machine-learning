@@ -1,0 +1,6 @@
+Cargo: DesenvolvedorPython, Nível: Pleno
+Descrição CHA separado por topico: ['Python', ' Programação Orientada a Objetos', ' Banco de Dados Relacionais', ' Frameworks Web (Django', ' Flask)', ' Testes Automatizados', ' Git', ' Metodologias ÁgeisResolução de Problemas', ' Comunicação Interpessoal', ' Trabalho em Equipe', ' Flexibilidade', ' Pensamento Analítico', ' Organização', ' Atenção aos DetalhesProatividade', ' Autonomia', ' Iniciativa', ' Adaptabilidade', ' Comprometimento', ' Aprendizado Contínuo', ' Resiliência']
+
+
+Cargo: Master, Nível: Pleno
+Descrição CHA separado por topico: ['Liderança', '  Gestão de projetos', '  Negociação', '  Inovação', '  Tecnologia Desenvolvimento pessoal', '  ComunicaçãoTomada de decisão', '  Trabalho em equipe', '  Planejamento estratégico', '  Resolução de conflitos', '  Mentoria', '  Análise crítica', '  FlexibilidadeProatividade Adaptabilidade', '  Pensamento crítico', '  Comprometimento', '  Responsabilidade', '  Ética', '  Empatia']
