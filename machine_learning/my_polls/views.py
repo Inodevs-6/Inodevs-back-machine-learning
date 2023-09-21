@@ -78,12 +78,15 @@ def chatgpt(request):
             print('Print das chaves' , descricao_cha)
 
             # Conhecimentos, Habilidades e Atitudes
-            nova_descricao.vaga_conhecimentos = descricao_cha[chaves[0]]
-            nova_descricao.vaga_habilidades = descricao_cha[chaves[1]]
-            nova_descricao.vaga_atitudes = descricao_cha[chaves[2]]
-            nova_descricao.save()
+            nova_descricao.vaga_conhecimentos = descricao_cha['descricao'][chaves[0]]
+            nova_descricao.vaga_habilidades = descricao_cha['descricao'][chaves[1]]
+            nova_descricao.vaga_atitudes = descricao_cha['descricao'][chaves[2]]
+            # nova_descricao.save()
 
-            return HttpResponse('Dados salvos com sucesso e descrição CHA gerada.')
+            descricao = {'descricao':descricao_cha}
+            return HttpResponse(json.dumps(descricao['descricao']), content_type="application/json")
+
+            # return HttpResponse('Dados salvos com sucesso e descrição CHA gerada.')
         else:
             return HttpResponse('Erro! A descrição a ser gerada já existe, modifique-a como desejar ou insira um novo cargo/nivel.')
 
