@@ -81,7 +81,7 @@ def chatgpt(request):
             nova_descricao.vaga_conhecimentos = descricao_cha['descricao'][chaves[0]]
             nova_descricao.vaga_habilidades = descricao_cha['descricao'][chaves[1]]
             nova_descricao.vaga_atitudes = descricao_cha['descricao'][chaves[2]]
-            # nova_descricao.save()
+            nova_descricao.save()
 
             descricao = {'descricao':descricao_cha}
             return HttpResponse(json.dumps(descricao['descricao']), content_type="application/json")
@@ -140,10 +140,11 @@ def match(request):
     df = pd.DataFrame(data)
 
     vaga = json.loads(request.body.decode('utf-8')).get('cargo')
+    nivel = json.loads(request.body.decode('utf-8')).get('nivel')
 
-    if Vaga.objects.filter(vaga_nome=vaga):
+    if Vaga.objects.filter(vaga_nome=vaga, vaga_nivel=nivel):
         # descricao_chas = Vaga.objects.filter(cargo=request.POST.get('cargo'))
-        descricao_chas = Vaga.objects.filter(vaga_nome=vaga)
+        descricao_chas = Vaga.objects.filter(vaga_nome=vaga, vaga_nivel=nivel)
 
         # Itere sobre os objetos recuperados
         for descricao_cha in descricao_chas:
