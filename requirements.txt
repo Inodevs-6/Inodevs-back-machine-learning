@@ -7,5 +7,6 @@ openai
 python-dotenv
 django
 mysqlclient
+django-cors-headers
 
 # Comando para mapear as tabelas de acordo com a conexão feita no settings.py -> python manage.py inspectdb > nome_da_app.models.py # 
