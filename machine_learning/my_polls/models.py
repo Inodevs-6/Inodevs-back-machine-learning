@@ -2,9 +2,8 @@ from django.db import models
 
 class Candidato(models.Model):
     cand_id = models.BigAutoField(primary_key=True)
-    cand_nome = models.CharField(max_length=50)
-    cand_experiencia = models.TextField()
-    cand_contato = models.CharField(max_length=50)
+    cand_exp = models.TextField()
+    cand_link = models.CharField(max_length=50)
 
     class Meta:
         managed = False
@@ -16,6 +15,7 @@ class CandidatoVaga(models.Model):
     cand = models.ForeignKey(Candidato, models.DO_NOTHING)
     cand_vaga_rank = models.IntegerField()
     cand_vaga_pontos_cha = models.IntegerField()
+    cand_percent_match = models.FloatField(blank=True, null=True)
 
     class Meta:
         managed = False
