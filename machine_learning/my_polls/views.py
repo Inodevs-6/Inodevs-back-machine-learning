@@ -33,12 +33,12 @@ def chatgpt(request):
             response = openai.ChatCompletion.create(
                         engine="modelgpt35t",
                         messages=[
-                            {"role": "system", "content": f'De acordo com a descrição CHA (Compentecias, Habilidades e Atitudes) da área de RH, crie uma descrição para o cargo {cargo} com o nivel {nivel}, separados em tópicos e em palavras chave sem complementar essas palavras chave de maneira resumida e objetiva, e em formato json.'+
+                            {"role": "system", "content": f'De acordo com a descrição CHA (Compentecias, Habilidades e Atitudes) da área de RH, crie uma descrição para o cargo {cargo} com o nivel {nivel}, separados em tópicos e em palavras chave sem complementar essas palavras chave de maneira resumida e objetiva (limite de 1 ou 2 palavras no máximo), e em formato json.'+
                                 '''
                                 Siga exatamente o seguinte formato:
                                 {
                                     "Título do Cargo": "Cargo e seu nivel requerido",
-                                    "descricao":[
+                                    "descricao": {
                                         "Conhecimentos": [
                                             "Palavra chave",
                                             "Palavra chave",
@@ -66,9 +66,9 @@ def chatgpt(request):
                                             "Palavra chave",
                                             "Palavra chave"
                                         ]
-                                    ]
+                                    }
                                 }'''
-                                },
+                            },
                         ]
                     )
             descricao_cha = json.loads(response['choices'][0]['message']['content'])
@@ -98,7 +98,7 @@ def scrap(request):
     response = requests.get(url)
 
     # Dataframe com as colunas pré-setadas para criação do arquivo csv
-    df = {'Link_Candidato':[], 'Experiencia':[]}
+    df = {'Nome':[], 'Idade':[], 'Experiencia':[], 'Email':[]}
 
     # Se o request for um sucesso ele entrará dentro do if para o tratamento do html
     if response.status_code == 200:
@@ -107,15 +107,14 @@ def scrap(request):
         soup.prettify()
         soup = soup.body.find_all('td')
         
-        id_cand = 0
 
         # Adicionando as linhas de informações dos candidatos no dataframe declarado no começo e retirando as tags dos elementos
         while soup:
-            df['Link_Candidato'].append(url+str(id_cand))
+            df['Nome'].append(soup[-4].string.replace('<td>', '').replace('/', ''))
+            df['Idade'].append(soup[-3].string.replace('<td>', '').replace('/', ''))
             df['Experiencia'].append(soup[-2].string.replace('<td>', '').replace('/', ''))
+            df['Email'].append(soup[-1].string.replace('<td>', '').replace('/', ''))
             soup = soup[:-4]
-
-            id_cand+=1
             
         
         # Transformando o dicionario 'df' criado com as informações em um dataframe utilizando o pandas seguido da geração do arquivo csv
@@ -169,19 +168,18 @@ def match(request):
         df["Pontuacao_Habilidades"] = 0
         df["Pontuacao_Atitudes"] = 0
 
-        # Concatenar conhecimentos, habilidades e atitudes em uma string
-        cha_texto = ' '.join(cha)
-
-        # Usar CountVectorizer para contar as ocorrências de palavras-chave nas experiências dos candidatos
-        matriz_contagens = vectorizer.fit_transform(df["Experiencia"] + ' ' + cha_texto)
-
-        # Obter o vocabulário (palavras únicas)
-        vocabulario = vectorizer.get_feature_names_out()
-
-        print(vocabulario)
-
-        # Atualizar as colunas de pontuação correspondentes
-        df[["Pontuacao_Conhecimentos", "Pontuacao_Habilidades", "Pontuacao_Atitudes"]] = matriz_contagens.toarray()[:, :3]
+        # Percorrer cada palavra-chave de conhecimento, habilidade e atitude
+        for palavra_chave in cha:
+            # Verificar se a palavra-chave está presente nas experiências dos candidatos
+            df[palavra_chave] = df["Experiencia"].str.contains(palavra_chave, case=False, regex=False).astype(int)
+            
+            # Atualizar a pontuação correspondente para cada candidato
+            if palavra_chave in conhecimentos:
+                df["Pontuacao_Conhecimentos"] += df[palavra_chave]
+            elif palavra_chave in habilidades:
+                df["Pontuacao_Habilidades"] += df[palavra_chave]
+            elif palavra_chave in atitudes:
+                df["Pontuacao_Atitudes"] += df[palavra_chave]
 
         # Calcular a pontuação total para cada candidato
         df["Pontuacao_Final"] = df["Pontuacao_Conhecimentos"] + df["Pontuacao_Habilidades"] + df["Pontuacao_Atitudes"]
@@ -190,52 +188,140 @@ def match(request):
         if not os.path.exists('csv/results'):
             os.makedirs('csv/results')
 
-        # Calcular a porcentagem com base na coluna "Pontuacao_Final"
-        df["Porcentagem"] = round((df["Pontuacao_Final"] / len(cha)) * 100, 2)
+        # Classificar os candidatos por pontuação total em ordem decrescente
+        df_classificado = df.sort_values(by="Pontuacao_Final", ascending=False)
+        df_classificado = df_classificado.head(8)
+
+        # Salvar o resultado em um arquivo CSV com todas as informações
+        df_classificado.to_csv("csv/results/curriculos_classificados_com_critérios.csv", index=False)
 
         # Criar um DataFrame com a quantidade total de conhecimento, habilidade e atitude de cada pessoa
-        df_total = df[["Link_Candidato", "Experiencia","Pontuacao_Conhecimentos", "Pontuacao_Habilidades", "Pontuacao_Atitudes", "Pontuacao_Final", "Porcentagem"]].sort_values(by="Pontuacao_Final", ascending=False)
+        df_total = df[["Nome", "Experiencia", "Email" ,"Pontuacao_Conhecimentos", "Pontuacao_Habilidades", "Pontuacao_Atitudes", "Pontuacao_Final"]].sort_values(by="Pontuacao_Final", ascending=False)
         df_total = df_total.head(8)
-        
-        # Salvar o resultado em um arquivo CSV separado
-        df_total.to_csv("./csv/results/ranqueamento_por_cha_porcentagem.csv", index=False)
-        
+                
         x=0
         for index, row in df_total.iterrows():
             x+=1
-            if not (Candidato.objects.filter(cand_link=row['Link_Candidato'])):
+            if not (Candidato.objects.filter(cand_contato=row['Email'])):
 
                 new_candidato = Candidato()
-                new_candidato.cand_link = row['Link_Candidato']
-                new_candidato.cand_exp = row['Experiencia']
+                new_candidato.cand_nome = row['Nome']
+                new_candidato.cand_experiencia = row['Experiencia']
+                new_candidato.cand_contato = row['Email']
                 new_candidato.save()
 
 
-                # Recupere o candidato correspondente com base no Link_Candidato
+                # Recupere o candidato correspondente com base no email
                 desc = Vaga.objects.get(vaga_nome=vaga, vaga_nivel=nivel)
-                candidato = Candidato.objects.get(cand_link=row['Link_Candidato'])
+                candidato = Candidato.objects.get(cand_contato=row['Email'])
 
                 # Crie uma instância da tabela intermediária e associe o candidato e a descrição de cargo
-                CandidatoVaga.objects.create(vaga=desc, cand=candidato, cand_vaga_rank=x, cand_vaga_pontos_cha=row['Pontuacao_Final'], cand_percent_match=row['Porcentagem'])
+                CandidatoVaga.objects.create(vaga=desc, cand=candidato, cand_vaga_rank=x, cand_vaga_pontos_cha=row['Pontuacao_Final'])
                 
-                print(f"O candidato {row['Link_Candidato']} foi cadastrado com sucesso")
+                print(f"O candidato {row['Nome']} foi cadastrado com sucesso")
 
-            elif Candidato.objects.get(cand_link=row['Link_Candidato']):
+            elif Candidato.objects.get(cand_contato=row['Email']):
 
                 # Recupere a descrição correspondente com base no cargo e nível
                 desc = Vaga.objects.get(vaga_nome=vaga, vaga_nivel=nivel)
                 
-                # Recupere o candidato correspondente com base no Link_Candidato
-                candidato = Candidato.objects.get(cand_link=row['Link_Candidato'])
+                # Recupere o candidato correspondente com base no email
+                candidato = Candidato.objects.get(cand_contato=row['Email'])
 
                 # Crie uma instância da tabela intermediária e associe o candidato e a descrição de cargo
-                CandidatoVaga.objects.create(vaga=desc, cand=candidato, cand_vaga_rank=x, cand_vaga_pontos_cha=row['Pontuacao_Final'], cand_percent_match=row['Porcentagem'])
+                CandidatoVaga.objects.create(vaga=desc, cand=candidato, cand_vaga_rank=x, cand_vaga_pontos_cha=row['Pontuacao_Final'])
                 
-                print(f"A atualização do candidato {row['Link_Candidato']} foi concluido!")
+                print(f"A atualização do candidato {row['Nome']} foi concluido!")
 
             else:
-                print(f"O cadastramento do candidato {row['Link_Candito']} não foi concluido, pois possivelmente houveram dados duplicados.")        
+                print(f"O cadastramento do candidato {row['Nome']} não foi concluido, pois possivelmente houveram dados duplicados.")
+
+
+        # Salvar o resultado em um arquivo CSV separado
+        df_total.to_csv("./csv/results/ranqueamento_por_cha.csv", index=False)
+        
 
         return HttpResponse('O arquivo com a classificação foi gerado com sucesso.')
     
     return HttpResponse('Não foi possível encontrar o cargo requerido.')
+
+@csrf_exempt
+def upgrade(request):
+
+    openai.api_type = "azure"
+    openai.api_base = "https://interactai.openai.azure.com/"
+    openai.api_version = "2023-05-15"
+    openai.api_key = os.environ['API_KEY']
+
+    cargo = json.loads(request.body.decode('utf-8')).get('cargo')
+    nivel = json.loads(request.body.decode('utf-8')).get('nivel')
+    cha = json.loads(request.body.decode('utf-8')).get('cha')
+    campo = json.loads(request.body.decode('utf-8')).get('campo')
+    descricao = json.loads(request.body.decode('utf-8')).get('descricao')
+    
+    mensagem = ''
+
+    if descricao:
+        mensagem += f'De acordo com o seguinte comentário: "{descricao}", modifique, caso solicitado, o seguinte CHA (Conhecimentos, Habilidades e Atitudes): {cha}' + '''. Retorne separados em 7 palavras-chaves (limite de 1 ou 2 palavras no máximo), de maneira resumida e objetiva, e em formato json.
+        Siga exatamente o seguinte formato:
+        {
+            "Título do Cargo": "Cargo e seu nivel requerido",
+            "descricao": {
+                "Conhecimentos": [
+                    "Palavra chave",
+                    "Palavra chave",
+                    "Palavra chave",
+                    "Palavra chave",
+                    "Palavra chave",
+                    "Palavra chave",
+                    "Palavra chave"
+                ],
+                "Habilidades": [
+                    "Palavra chave",
+                    "Palavra chave",
+                    "Palavra chave",
+                    "Palavra chave",
+                    "Palavra chave",
+                    "Palavra chave",
+                    "Palavra chave"
+                ],
+                "Atitudes": [
+                    "Palavra chave",
+                    "Palavra chave",
+                    "Palavra chave",
+                    "Palavra chave",
+                    "Palavra chave",
+                    "Palavra chave",
+                    "Palavra chave"
+                ]
+            }
+        }'''
+    else:
+        mensagem += f'Crie uma descrição de {campo} mais adequadas para o cargo {cargo} com nivel {nivel}' + '''. Retorne a resposta separado em 7 palavras-chaves (com limite de 1 ou 2 palavras no máximo), e em formato json.'
+        Siga exatamente o seguinte formato:
+        {
+            "Título do Cargo": "Cargo e seu nivel requerido",
+            "descricao": {"''' + campo + '''": [
+                    "Palavra chave",
+                    "Palavra chave",
+                    "Palavra chave",
+                    "Palavra chave",
+                    "Palavra chave",
+                    "Palavra chave",
+                    "Palavra chave"
+                }
+            ]
+        }'''
+
+    print(mensagem)
+
+    response = openai.ChatCompletion.create(
+        engine="modelgpt35t",
+        messages=[
+            {"role": "system", "content": mensagem},
+        ]
+    )
+
+    data = json.loads(response['choices'][0]['message']['content'])
+
+    return HttpResponse(json.dumps(data), content_type="application/json")
