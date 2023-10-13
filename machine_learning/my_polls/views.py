@@ -257,61 +257,14 @@ def upgrade(request):
     nivel = json.loads(request.body.decode('utf-8')).get('nivel')
     cha = json.loads(request.body.decode('utf-8')).get('cha')
     campo = json.loads(request.body.decode('utf-8')).get('campo')
-    descricao = json.loads(request.body.decode('utf-8')).get('descricao')
+    comentario = json.loads(request.body.decode('utf-8')).get('comentario')
     
     mensagem = ''
 
-    if descricao:
-        mensagem += f'De acordo com o seguinte comentário: "{descricao}", modifique, caso solicitado, o seguinte CHA (Conhecimentos, Habilidades e Atitudes): {cha}' + '''. Retorne separados em 7 palavras-chaves (limite de 1 ou 2 palavras no máximo), de maneira resumida e objetiva, e em formato json.
-        Siga exatamente o seguinte formato:
-        {
-            "Título do Cargo": "Cargo e seu nivel requerido",
-            "descricao": {
-                "Conhecimentos": [
-                    "Palavra chave",
-                    "Palavra chave",
-                    "Palavra chave",
-                    "Palavra chave",
-                    "Palavra chave",
-                    "Palavra chave",
-                    "Palavra chave"
-                ],
-                "Habilidades": [
-                    "Palavra chave",
-                    "Palavra chave",
-                    "Palavra chave",
-                    "Palavra chave",
-                    "Palavra chave",
-                    "Palavra chave",
-                    "Palavra chave"
-                ],
-                "Atitudes": [
-                    "Palavra chave",
-                    "Palavra chave",
-                    "Palavra chave",
-                    "Palavra chave",
-                    "Palavra chave",
-                    "Palavra chave",
-                    "Palavra chave"
-                ]
-            }
-        }'''
+    if comentario:
+        mensagem += f'De acordo com o seguinte CHA (Conhecimentos, Habilidades e Atitudes), de um {cargo} com nível {nivel}: {cha}, sendo a seguinte instrução: "{comentario}", retorne 7 palavras-chaves (limite de 1 ou 2 palavras no máximo) de cada tópico de acordo com a instrução, seguindo o formato json do CHA anterior com os três tópicos, matendo mesmo sem modificar alguns campos (retorne apenas o json sem nenhum outro comentário).'
     else:
-        mensagem += f'Crie uma descrição de {campo} mais adequadas para o cargo {cargo} com nivel {nivel}' + '''. Retorne a resposta separado em 7 palavras-chaves (com limite de 1 ou 2 palavras no máximo), e em formato json.'
-        Siga exatamente o seguinte formato:
-        {
-            "Título do Cargo": "Cargo e seu nivel requerido",
-            "descricao": {"''' + campo + '''": [
-                    "Palavra chave",
-                    "Palavra chave",
-                    "Palavra chave",
-                    "Palavra chave",
-                    "Palavra chave",
-                    "Palavra chave",
-                    "Palavra chave"
-                }
-            ]
-        }'''
+        mensagem += f'De acordo com as seguintes palavras-chaves do campo de {campo} de um {cargo} com nível {nivel}: {cha}, altere para outras palavras-chaves (não necessariamente precisam ser as mesmas), retornando em 7 palavras-chaves (limite de 1 ou 2 palavras no máximo), seguindo o formato json citado anteriormente (retorne apenas o json com o resultado sem mais nenhum outro comentário).'
 
     print(mensagem)
 
@@ -321,6 +274,8 @@ def upgrade(request):
             {"role": "system", "content": mensagem},
         ]
     )
+
+    print(response['choices'][0]['message']['content'])
 
     data = json.loads(response['choices'][0]['message']['content'])
 
