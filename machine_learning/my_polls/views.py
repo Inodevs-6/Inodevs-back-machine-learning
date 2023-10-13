@@ -1,5 +1,7 @@
 from django.views.decorators.csrf import csrf_exempt
 from django.http import HttpResponse
+from django.core.exceptions import ValidationError
+from django.http import HttpResponseServerError
 import openai
 from .models import *
 import json
@@ -258,25 +260,33 @@ def upgrade(request):
     cha = json.loads(request.body.decode('utf-8')).get('cha')
     campo = json.loads(request.body.decode('utf-8')).get('campo')
     comentario = json.loads(request.body.decode('utf-8')).get('comentario')
+
+    if not cargo or not cargo.strip() or not nivel or not nivel.strip():
+        print('a')
+        raise ValidationError("Preencha todos os campos!")
     
     mensagem = ''
 
     if comentario:
         mensagem += f'De acordo com o seguinte CHA (Conhecimentos, Habilidades e Atitudes), de um {cargo} com nível {nivel}: {cha}, sendo a seguinte instrução: "{comentario}", retorne 7 palavras-chaves (limite de 1 ou 2 palavras no máximo) de cada tópico de acordo com a instrução, seguindo o formato json do CHA anterior com os três tópicos, matendo mesmo sem modificar alguns campos (retorne apenas o json sem nenhum outro comentário).'
     else:
+        if not campo or not cargo.strip():
+            raise ValidationError("Preencha todos os campos!")
+
         mensagem += f'De acordo com as seguintes palavras-chaves do campo de {campo} de um {cargo} com nível {nivel}: {cha}, altere para outras palavras-chaves (não necessariamente precisam ser as mesmas), retornando em 7 palavras-chaves (limite de 1 ou 2 palavras no máximo), seguindo o formato json citado anteriormente (retorne apenas o json com o resultado sem mais nenhum outro comentário).'
 
-    print(mensagem)
+    try:
+        response = openai.ChatCompletion.create(
+            engine="modelgpt35t",
+            messages=[
+                {"role": "system", "content": mensagem},
+            ]
+        )
 
-    response = openai.ChatCompletion.create(
-        engine="modelgpt35t",
-        messages=[
-            {"role": "system", "content": mensagem},
-        ]
-    )
+        print(response['choices'][0]['message']['content'])
 
-    print(response['choices'][0]['message']['content'])
-
-    data = json.loads(response['choices'][0]['message']['content'])
+        data = json.loads(response['choices'][0]['message']['content'])
+    except:
+        return HttpResponseServerError("Ops! Algo deu errado no servidor. Reinicie e tente novamente mais tarde.")
 
     return HttpResponse(json.dumps(data), content_type="application/json")
