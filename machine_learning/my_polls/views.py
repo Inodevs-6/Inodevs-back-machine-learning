@@ -8,9 +8,14 @@ from bs4 import BeautifulSoup
 import pandas as pd
 from sklearn.feature_extraction.text import CountVectorizer
 import os
+from nltk.corpus import stopwords
+import nltk
 from dotenv import load_dotenv
+
 load_dotenv()
 
+nltk.download('stopwords')
+nltk.download('punkt')
 
 # Função para recebimento de cargo e nivel para a geração da descrição CHA, salvando-o no banco de dados
 @csrf_exempt
@@ -38,7 +43,7 @@ def chatgpt(request):
                                 Siga exatamente o seguinte formato:
                                 {
                                     "Título do Cargo": "Cargo e seu nivel requerido",
-                                    "descricao":[
+                                    "descricao":{
                                         "Conhecimentos": [
                                             "Palavra chave",
                                             "Palavra chave",
@@ -66,7 +71,7 @@ def chatgpt(request):
                                             "Palavra chave",
                                             "Palavra chave"
                                         ]
-                                    ]
+                                    }
                                 }'''
                                 },
                         ]
@@ -112,7 +117,7 @@ def scrap(request):
         # Adicionando as linhas de informações dos candidatos no dataframe declarado no começo e retirando as tags dos elementos
         while soup:
             df['Link_Candidato'].append(url+str(id_cand))
-            df['Experiencia'].append(soup[-2].string.replace('<td>', '').replace('/', ''))
+            df['Experiencia'].append(soup[-2].string.replace('<td>', '').replace('/', '').lower())
             soup = soup[:-4]
 
             id_cand+=1
@@ -157,27 +162,34 @@ def match(request):
             conhecimentos = descricao_cha.vaga_conhecimentos
             habilidades = descricao_cha.vaga_habilidades
             atitudes = descricao_cha.vaga_atitudes
-            cha = (conhecimentos + habilidades + atitudes).replace('[', '').replace(']', '').replace("'", '').split(',')
+            cha_list = (conhecimentos + habilidades + atitudes).replace('[', '').replace(']', '').replace("'", '').split(',')
+
+            # Concatenar conhecimentos, habilidades e atitudes em uma string
+            cha_texto = ' '.join(cha_list)
 
             print(f"Cargo: {cargo}, Nível: {nivel}")
-            print(f"Descrição CHA separado por topico: {cha}")
+            print(f"Descrição CHA separado por topico: {cha_list}")
+        
+        # Baixar as stop words em português do NLTK
+        stop_words_pt = list(set(stopwords.words('portuguese')))
 
-        vectorizer = CountVectorizer()
+        # Cria um vetorizador utilizando CountVectorizer e configurando para ignorar palavras comuns do português de acordo com o NLTK (de, da, os, as...)
+        vectorizer = CountVectorizer(stop_words=stop_words_pt)
 
         # Inicializar as colunas de pontuação
         df["Pontuacao_Conhecimentos"] = 0
         df["Pontuacao_Habilidades"] = 0
         df["Pontuacao_Atitudes"] = 0
 
-        # Concatenar conhecimentos, habilidades e atitudes em uma string
-        cha_texto = ' '.join(cha)
-
-        # Usar CountVectorizer para contar as ocorrências de palavras-chave nas experiências dos candidatos
+        # Usar CountVectorizer para contar as ocorrências de palavras-chave nas experiências dos candidatos, fit para treinar o vocabulario de acordo com as 
+        # configurações na declaração do vectorizer, transform para aplicar o algoritmo treinado no df alvo
         matriz_contagens = vectorizer.fit_transform(df["Experiencia"] + ' ' + cha_texto)
 
-        # Obter o vocabulário (palavras únicas)
+        # Obter o vocabulário (palavras únicas) resultante do treinamento
         vocabulario = vectorizer.get_feature_names_out()
 
+        # Criar DataFrame da matriz para futuramente utilizar as colunas criadas de acordo com as palavras chave
+        df_contagens = pd.DataFrame(matriz_contagens.toarray(), columns=vocabulario)
         print(vocabulario)
 
         # Atualizar as colunas de pontuação correspondentes
@@ -190,17 +202,25 @@ def match(request):
         if not os.path.exists('csv/results'):
             os.makedirs('csv/results')
 
+        # Adicionar colunas para cada palavra-chave
+        df = pd.concat([df, df_contagens], axis=1)
+
         # Calcular a porcentagem com base na coluna "Pontuacao_Final"
-        df["Porcentagem"] = round((df["Pontuacao_Final"] / len(cha)) * 100, 2)
+        df["Porcentagem"] = round((df["Pontuacao_Final"] / len(cha_list)) * 100, 2)
 
         # Criar um DataFrame com a quantidade total de conhecimento, habilidade e atitude de cada pessoa
         df_total = df[["Link_Candidato", "Experiencia","Pontuacao_Conhecimentos", "Pontuacao_Habilidades", "Pontuacao_Atitudes", "Pontuacao_Final", "Porcentagem"]].sort_values(by="Pontuacao_Final", ascending=False)
         df_total = df_total.head(8)
+
+        df.to_csv("./csv/results/ranqueamento_por_chave.csv", index=False)
         
         # Salvar o resultado em um arquivo CSV separado
         df_total.to_csv("./csv/results/ranqueamento_por_cha_porcentagem.csv", index=False)
         
+        # Variavel utilizada para dar um numero ao rank no banco de dados
         x=0
+
+        # For para iterar pelo df_total e, se for necessario salvar os candidatos novos e em seguida criar a relação de vaga -> candidato
         for index, row in df_total.iterrows():
             x+=1
             if not (Candidato.objects.filter(cand_link=row['Link_Candidato'])):
