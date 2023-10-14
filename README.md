@@ -24,11 +24,17 @@ To run all this project you need to install the python 3.8, because of the libra
 ```
   pip install -r requirements.txt
 ```
+```
+  python manage.py runserver
+```
 
 ## Local installation manual without virtual environment:
 1. Run this command in the main folder:
 ```
   pip install -r requirements.txt
+```
+```
+ python manage.py runserver
 ```
 
 
