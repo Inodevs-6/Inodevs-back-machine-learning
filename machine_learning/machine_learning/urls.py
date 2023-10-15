@@ -13,4 +13,8 @@ urlpatterns = [
 
     # Rota para fazer o match dos candidatos ja retornando o rank dos 8 melhores, esperando os cadidatos e a descrição CHA.
     path('match', views.match, name='match'),
+        
+    # Rota para aprimoramento da descrição CHA, esperando como POST cargo, nivel, cha, campo e descricao (opcional).
+    path('upgrade', views.upgrade, name='upgrade'),
+
 ]

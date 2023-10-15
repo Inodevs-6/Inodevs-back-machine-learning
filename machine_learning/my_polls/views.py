@@ -1,5 +1,7 @@
 from django.views.decorators.csrf import csrf_exempt
 from django.http import HttpResponse
+from django.core.exceptions import ValidationError
+from django.http import HttpResponseServerError
 import openai
 from .models import *
 import json
@@ -259,3 +261,47 @@ def match(request):
         return HttpResponse('O arquivo com a classificação foi gerado com sucesso.')
     
     return HttpResponse('Não foi possível encontrar o cargo requerido.')
+
+@csrf_exempt
+def upgrade(request):
+
+    openai.api_type = "azure"
+    openai.api_base = "https://interactai.openai.azure.com/"
+    openai.api_version = "2023-05-15"
+    openai.api_key = os.environ['API_KEY']
+
+    cargo = json.loads(request.body.decode('utf-8')).get('cargo')
+    nivel = json.loads(request.body.decode('utf-8')).get('nivel')
+    cha = json.loads(request.body.decode('utf-8')).get('cha')
+    campo = json.loads(request.body.decode('utf-8')).get('campo')
+    comentario = json.loads(request.body.decode('utf-8')).get('comentario')
+
+    if not cargo or not cargo.strip() or not nivel or not nivel.strip():
+        print('a')
+        raise ValidationError("Preencha todos os campos!")
+    
+    mensagem = ''
+
+    if comentario:
+        mensagem += f'De acordo com o seguinte CHA (Conhecimentos, Habilidades e Atitudes), de um {cargo} com nível {nivel}: {cha}, sendo a seguinte instrução: "{comentario}", retorne 7 palavras-chaves (limite de 1 ou 2 palavras no máximo) de cada tópico de acordo com a instrução, seguindo o formato json do CHA anterior com os três tópicos, matendo mesmo sem modificar alguns campos (retorne apenas o json sem nenhum outro comentário).'
+    else:
+        if not campo or not cargo.strip():
+            raise ValidationError("Preencha todos os campos!")
+
+        mensagem += f'De acordo com as seguintes palavras-chaves do campo de {campo} de um {cargo} com nível {nivel}: {cha}, altere para outras palavras-chaves (não necessariamente precisam ser as mesmas), retornando em 7 palavras-chaves (limite de 1 ou 2 palavras no máximo), seguindo o formato json citado anteriormente (retorne apenas o json com o resultado sem mais nenhum outro comentário).'
+
+    try:
+        response = openai.ChatCompletion.create(
+            engine="modelgpt35t",
+            messages=[
+                {"role": "system", "content": mensagem},
+            ]
+        )
+
+        print(response['choices'][0]['message']['content'])
+
+        data = json.loads(response['choices'][0]['message']['content'])
+    except:
+        return HttpResponseServerError("Ops! Algo deu errado no servidor. Reinicie e tente novamente mais tarde.")
+
+    return HttpResponse(json.dumps(data), content_type="application/json")
