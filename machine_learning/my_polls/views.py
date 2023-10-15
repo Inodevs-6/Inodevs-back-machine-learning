@@ -195,7 +195,20 @@ def match(request):
         df_contagens = pd.DataFrame(matriz_contagens.toarray(), columns=vocabulario)
 
         # Atualizar as colunas de pontuação correspondentes
-        df[["Pontuacao_Conhecimentos", "Pontuacao_Habilidades", "Pontuacao_Atitudes"]] = matriz_contagens.toarray()[:, :3]
+        # df[["Pontuacao_Conhecimentos", "Pontuacao_Habilidades", "Pontuacao_Atitudes"]] = matriz_contagens.toarray()[:, :3]
+
+        # Percorrer cada palavra-chave de conhecimento, habilidade e atitude
+        for palavra_chave in vocabulario:
+            # Verificar se a palavra-chave está presente nas experiências dos candidatos
+            df[palavra_chave] = df["Experiencia"].str.contains(palavra_chave, case=False, regex=False).astype(int)
+            
+            # Atualizar a pontuação correspondente para cada candidato
+            if palavra_chave in conhecimentos:
+                df["Pontuacao_Conhecimentos"] += df[palavra_chave]
+            elif palavra_chave in habilidades:
+                df["Pontuacao_Habilidades"] += df[palavra_chave]
+            elif palavra_chave in atitudes:
+                df["Pontuacao_Atitudes"] += df[palavra_chave]
 
         # Calcular a pontuação total para cada candidato
         df["Pontuacao_Final"] = df["Pontuacao_Conhecimentos"] + df["Pontuacao_Habilidades"] + df["Pontuacao_Atitudes"]
