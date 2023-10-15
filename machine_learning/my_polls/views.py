@@ -90,8 +90,9 @@ def chatgpt(request):
             nova_descricao.vaga_atitudes = descricao_cha['descricao'][chaves[2]]
             nova_descricao.save()
 
-            descricao = {'descricao':descricao_cha}
-            return HttpResponse(json.dumps(descricao['descricao']), content_type="application/json")
+            descricao_cha['id'] = nova_descricao.vaga_id
+
+            return HttpResponse(json.dumps(descricao_cha), content_type="application/json")
 
             # return HttpResponse('Dados salvos com sucesso e descrição CHA gerada.')
         else:
@@ -192,7 +193,6 @@ def match(request):
 
         # Criar DataFrame da matriz para futuramente utilizar as colunas criadas de acordo com as palavras chave
         df_contagens = pd.DataFrame(matriz_contagens.toarray(), columns=vocabulario)
-        print(vocabulario)
 
         # Atualizar as colunas de pontuação correspondentes
         df[["Pontuacao_Conhecimentos", "Pontuacao_Habilidades", "Pontuacao_Atitudes"]] = matriz_contagens.toarray()[:, :3]
@@ -277,18 +277,17 @@ def upgrade(request):
     comentario = json.loads(request.body.decode('utf-8')).get('comentario')
 
     if not cargo or not cargo.strip() or not nivel or not nivel.strip():
-        print('a')
         raise ValidationError("Preencha todos os campos!")
-    
+
     mensagem = ''
 
     if comentario:
-        mensagem += f'De acordo com o seguinte CHA (Conhecimentos, Habilidades e Atitudes), de um {cargo} com nível {nivel}: {cha}, sendo a seguinte instrução: "{comentario}", retorne 7 palavras-chaves (limite de 1 ou 2 palavras no máximo) de cada tópico de acordo com a instrução, seguindo o formato json do CHA anterior com os três tópicos, matendo mesmo sem modificar alguns campos (retorne apenas o json sem nenhum outro comentário).'
+        mensagem += f'De acordo com o seguinte CHA (Conhecimentos, Habilidades e Atitudes), de um {cargo} com nível {nivel}: {cha}, sendo a seguinte instrução: "{comentario}", retorne 7 palavras-chaves objetivas de cada tópico de acordo com a instrução, seguindo o formato json anterior com os três tópicos, matendo mesmo sem modificar alguns campos (retorne apenas o json sem nenhum outro comentário).'
     else:
         if not campo or not cargo.strip():
             raise ValidationError("Preencha todos os campos!")
 
-        mensagem += f'De acordo com as seguintes palavras-chaves do campo de {campo} de um {cargo} com nível {nivel}: {cha}, altere para outras palavras-chaves (não necessariamente precisam ser as mesmas), retornando em 7 palavras-chaves (limite de 1 ou 2 palavras no máximo), seguindo o formato json citado anteriormente (retorne apenas o json com o resultado sem mais nenhum outro comentário).'
+        mensagem += f'De acordo com as seguintes palavras-chaves do campo de {campo} de um {cargo} com nível {nivel}: {cha}, altere para outras palavras-chaves (não necessariamente precisam ser as mesmas), retornando em 7 palavras-chaves objetivas, seguindo o formato json citado anteriormente (retorne apenas o json com o resultado sem mais nenhum outro comentário).'
 
     try:
         response = openai.ChatCompletion.create(
