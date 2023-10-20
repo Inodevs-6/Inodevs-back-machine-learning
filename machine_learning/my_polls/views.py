@@ -102,7 +102,7 @@ def chatgpt(request):
 
 @csrf_exempt
 def scrap(request):
-    url = "https://scrap-example.onrender.com/scraping.html"  # Substitua pelo URL da página que você deseja acessar
+    url = "https://scrap-example.onrender.com/scraping_2.html"  # Substitua pelo URL da página que você deseja acessar
     response = requests.get(url)
 
     # Dataframe com as colunas pré-setadas para criação do arquivo csv
@@ -165,8 +165,8 @@ def match(request):
             conhecimentos = descricao_cha.vaga_conhecimentos
             habilidades = descricao_cha.vaga_habilidades
             atitudes = descricao_cha.vaga_atitudes
-            cha_list = (conhecimentos + habilidades + atitudes).replace('[', '').replace(']', '').replace("'", '').split(',')
-
+            cha_list = (conhecimentos + ',' + habilidades + ',' + atitudes).replace('[', '').replace(']', '').replace("'", '').split(',')
+            print(cha_list)
             # Concatenar conhecimentos, habilidades e atitudes em uma string
             cha_texto = ' '.join(cha_list)
 
@@ -186,15 +186,19 @@ def match(request):
 
         # Usar CountVectorizer para contar as ocorrências de palavras-chave nas experiências dos candidatos, fit para treinar o vocabulario de acordo com as 
         # configurações na declaração do vectorizer, transform para aplicar o algoritmo treinado no df alvo
-        matriz_contagens = vectorizer.fit_transform(df["Experiencia"] + ' ' + cha_texto)
+        matriz_contagens = vectorizer.fit(cha_list)
+        matriz_contagens = vectorizer.transform(df["Experiencia"])
+
 
         # Obter o vocabulário (palavras únicas) resultante do treinamento
         vocabulario = vectorizer.get_feature_names_out()
+        print(vocabulario)
+        print(cha_texto)
 
         # Criar DataFrame da matriz para futuramente utilizar as colunas criadas de acordo com as palavras chave
-        df_contagens = pd.DataFrame(matriz_contagens.toarray(), columns=vocabulario)
+        # df_contagens = pd.DataFrame(matriz_contagens.toarray(), columns=vocabulario)
 
-        # Atualizar as colunas de pontuação correspondentes
+        # # Atualizar as colunas de pontuação correspondentes
         # df[["Pontuacao_Conhecimentos", "Pontuacao_Habilidades", "Pontuacao_Atitudes"]] = matriz_contagens.toarray()[:, :3]
 
         # Percorrer cada palavra-chave de conhecimento, habilidade e atitude
@@ -218,10 +222,10 @@ def match(request):
             os.makedirs('csv/results')
 
         # Adicionar colunas para cada palavra-chave
-        df = pd.concat([df, df_contagens], axis=1)
+        # df = pd.concat([df, df_contagens], axis=1)
 
         # Calcular a porcentagem com base na coluna "Pontuacao_Final"
-        df["Porcentagem"] = round((df["Pontuacao_Final"] / len(cha_list)) * 100, 2)
+        df["Porcentagem"] = round((df["Pontuacao_Final"] / len(vocabulario)) * 100, 2)
 
         # Criar um DataFrame com a quantidade total de conhecimento, habilidade e atitude de cada pessoa
         df_total = df[["Link_Candidato", "Experiencia","Pontuacao_Conhecimentos", "Pontuacao_Habilidades", "Pontuacao_Atitudes", "Pontuacao_Final", "Porcentagem"]].sort_values(by="Pontuacao_Final", ascending=False)
@@ -230,7 +234,7 @@ def match(request):
         df.to_csv("./csv/results/ranqueamento_por_chave.csv", index=False)
         
         # Salvar o resultado em um arquivo CSV separado
-        df_total.to_csv("./csv/results/ranqueamento_por_cha_porcentagem.csv", index=False)
+        df_total.to_csv("./csv/results/ranqueamento_porcentagem.csv", index=False)
         
         # Variavel utilizada para dar um numero ao rank no banco de dados
         x=0
