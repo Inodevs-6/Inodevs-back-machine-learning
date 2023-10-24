@@ -152,7 +152,6 @@ def match(request):
     nivel = json.loads(request.body.decode('utf-8')).get('nivel')
 
     if Vaga.objects.filter(vaga_nome=vaga, vaga_nivel=nivel):
-        # descricao_chas = Vaga.objects.filter(cargo=request.POST.get('cargo'))
         descricao_chas = Vaga.objects.filter(vaga_nome=vaga, vaga_nivel=nivel)
 
         # Itere sobre os objetos recuperados
@@ -166,12 +165,9 @@ def match(request):
             habilidades = descricao_cha.vaga_habilidades
             atitudes = descricao_cha.vaga_atitudes
             cha_list = (conhecimentos + ',' + habilidades + ',' + atitudes).replace('[', '').replace(']', '').replace("'", '').split(',')
-            print(cha_list)
+
             # Concatenar conhecimentos, habilidades e atitudes em uma string
             cha_texto = ' '.join(cha_list)
-
-            print(f"Cargo: {cargo}, Nível: {nivel}")
-            print(f"Descrição CHA separado por topico: {cha_list}")
         
         # Baixar as stop words em português do NLTK
         stop_words_pt = list(set(stopwords.words('portuguese')))
@@ -180,55 +176,42 @@ def match(request):
         vectorizer = CountVectorizer(stop_words=stop_words_pt)
 
         # Inicializar as colunas de pontuação
-        df["Pontuacao_Conhecimentos"] = 0
-        df["Pontuacao_Habilidades"] = 0
-        df["Pontuacao_Atitudes"] = 0
+        # df["Pontuacao_Conhecimentos"] = 0
+        # df["Pontuacao_Habilidades"] = 0
+        # df["Pontuacao_Atitudes"] = 0
+
+        vocabulario = 'adaptabilidade aprender arquitetura banco bootstrap clara comprometimento comunicação css3 dados desenvolvimento disposição entregas equipe estratégica foco gerenciamento html5 javascript jquery js mudanças novas objetiva prazos proatividade problemas programação projetos reactjs resolução resultados software tecnologias teste trabalho ui ux visão vue web'.split(' ')        
 
         # Usar CountVectorizer para contar as ocorrências de palavras-chave nas experiências dos candidatos, fit para treinar o vocabulario de acordo com as 
         # configurações na declaração do vectorizer, transform para aplicar o algoritmo treinado no df alvo
-        matriz_contagens = vectorizer.fit(cha_list)
-        matriz_contagens = vectorizer.transform(df["Experiencia"])
-
+        matriz_contagens = vectorizer.fit_transform(df["Experiencia"])
 
         # Obter o vocabulário (palavras únicas) resultante do treinamento
         vocabulario = vectorizer.get_feature_names_out()
-        print(vocabulario)
-        print(cha_texto)
 
         # Criar DataFrame da matriz para futuramente utilizar as colunas criadas de acordo com as palavras chave
-        # df_contagens = pd.DataFrame(matriz_contagens.toarray(), columns=vocabulario)
+        df_contagens = pd.DataFrame(matriz_contagens.toarray(), columns=vocabulario)
 
-        # # Atualizar as colunas de pontuação correspondentes
-        # df[["Pontuacao_Conhecimentos", "Pontuacao_Habilidades", "Pontuacao_Atitudes"]] = matriz_contagens.toarray()[:, :3]
-
-        # Percorrer cada palavra-chave de conhecimento, habilidade e atitude
-        for palavra_chave in vocabulario:
-            # Verificar se a palavra-chave está presente nas experiências dos candidatos
-            df[palavra_chave] = df["Experiencia"].str.contains(palavra_chave, case=False, regex=False).astype(int)
-            
-            # Atualizar a pontuação correspondente para cada candidato
-            if palavra_chave in conhecimentos:
-                df["Pontuacao_Conhecimentos"] += df[palavra_chave]
-            elif palavra_chave in habilidades:
-                df["Pontuacao_Habilidades"] += df[palavra_chave]
-            elif palavra_chave in atitudes:
-                df["Pontuacao_Atitudes"] += df[palavra_chave]
+        # Atualizar as colunas de pontuação correspondentes
+        # df[["Pontuacao_Conhecimentos", "Pontuacao_Habilidades", "Pontuacao_Atitudes"]] = df_contagens[vocabulario].toarray()
 
         # Calcular a pontuação total para cada candidato
-        df["Pontuacao_Final"] = df["Pontuacao_Conhecimentos"] + df["Pontuacao_Habilidades"] + df["Pontuacao_Atitudes"]
+        df["Pontuacao_Final"] = df_contagens.sum(axis=1)
 
         # Confere se existe o seguinte caminho, se não, ele cria
         if not os.path.exists('csv/results'):
             os.makedirs('csv/results')
 
         # Adicionar colunas para cada palavra-chave
-        # df = pd.concat([df, df_contagens], axis=1)
+        df = pd.concat([df, df_contagens], axis=1)
 
         # Calcular a porcentagem com base na coluna "Pontuacao_Final"
         df["Porcentagem"] = round((df["Pontuacao_Final"] / len(vocabulario)) * 100, 2)
 
         # Criar um DataFrame com a quantidade total de conhecimento, habilidade e atitude de cada pessoa
-        df_total = df[["Link_Candidato", "Experiencia","Pontuacao_Conhecimentos", "Pontuacao_Habilidades", "Pontuacao_Atitudes", "Pontuacao_Final", "Porcentagem"]].sort_values(by="Pontuacao_Final", ascending=False)
+        # df_total = df[["Link_Candidato", "Experiencia","Pontuacao_Conhecimentos", "Pontuacao_Habilidades", "Pontuacao_Atitudes", "Pontuacao_Final", "Porcentagem"]].sort_values(by="Pontuacao_Final", ascending=False)
+
+        df_total = df[["Link_Candidato", "Experiencia", "Pontuacao_Final", "Porcentagem"]].sort_values(by="Pontuacao_Final", ascending=False)
         df_total = df_total.head(8)
 
         df.to_csv("./csv/results/ranqueamento_por_chave.csv", index=False)
@@ -268,7 +251,7 @@ def match(request):
                 candidato = Candidato.objects.get(cand_link=row['Link_Candidato'])
 
                 # Crie uma instância da tabela intermediária e associe o candidato e a descrição de cargo
-                CandidatoVaga.objects.create(vaga=desc, cand=candidato, cand_vaga_rank=x, cand_vaga_pontos_cha=row['Pontuacao_Final'], cand_percent_match=row['Porcentagem'])
+                # CandidatoVaga.objects.create(vaga=desc, cand=candidato, cand_vaga_rank=x, cand_vaga_pontos_cha=row['Pontuacao_Final'], cand_percent_match=row['Porcentagem'])
                 
                 print(f"A atualização do candidato {row['Link_Candidato']} foi concluido!")
 

@@ -37,6 +37,9 @@ class Empresa(models.Model):
 class EmpresaVaga(models.Model):
     vaga = models.ForeignKey('Vaga', models.DO_NOTHING)
     emp = models.OneToOneField(Empresa, models.DO_NOTHING, primary_key=True)  # The composite primary key (emp_id, vaga_id) found, that is not supported. The first column is selected.
+    vaga_conhecimentos_editada = models.TextField(blank=True, null=True)
+    vaga_habilidades_editada = models.TextField(blank=True, null=True)
+    vaga_atitudes_editada = models.TextField(blank=True, null=True)
 
     class Meta:
         managed = False
