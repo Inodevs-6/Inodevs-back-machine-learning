@@ -190,7 +190,7 @@ def match(request):
         # Matriz exemplo para vocabulario fixo para teste de porcentagem
         # matriz_contagens = vectorizer.fit(vocabulario2)
         
-        matriz_contagens = vectorizer.fit(vocabulario)
+        matriz_contagens = vectorizer.fit(cha_list)
         matriz_contagens = vectorizer.transform(df["Experiencia"])
 
         # Obter o vocabulário (palavras únicas) resultante do treinamento
