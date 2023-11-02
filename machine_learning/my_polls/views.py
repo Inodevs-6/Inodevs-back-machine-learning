@@ -289,18 +289,33 @@ def upgrade(request):
 
         mensagem += f'De acordo com as seguintes palavras-chaves do campo de {campo} de um {cargo} com nível {nivel}: {cha}, altere para outras palavras-chaves (não necessariamente precisam ser as mesmas), retornando em 7 palavras-chaves objetivas, seguindo o formato json citado anteriormente (retorne apenas o json com o resultado sem mais nenhum outro comentário).'
 
-    try:
-        response = openai.ChatCompletion.create(
-            engine="modelgpt35t",
-            messages=[
-                {"role": "system", "content": mensagem},
-            ]
-        )
+    tentativas = 0
 
-        print(response['choices'][0]['message']['content'])
+    while True:
+        try:
+            response = openai.ChatCompletion.create(
+                engine="modelgpt35t",
+                messages=[
+                    {"role": "system", "content": mensagem},
+                ]
+            )
 
-        data = json.loads(response['choices'][0]['message']['content'])
-    except:
-        return HttpResponseServerError("Ops! Algo deu errado no servidor. Reinicie e tente novamente mais tarde.")
+            print(response['choices'][0]['message']['content'])
+
+            data = json.loads(response['choices'][0]['message']['content'])
+
+            if comentario: data['descricao']
+            if campo == 'Conhecimentos': data['Conhecimentos']
+            if campo == 'Habilidades': data['Habilidades']
+            if campo == 'Atitudes': data['Atitudes']
+
+            break
+        except:
+            print('erro')
+            tentativas += 1
+
+            if tentativas >= 10:
+                 return HttpResponseServerError("Ops! Algo deu errado no servidor. Reinicie e tente novamente mais tarde.")
+
 
     return HttpResponse(json.dumps(data), content_type="application/json")
