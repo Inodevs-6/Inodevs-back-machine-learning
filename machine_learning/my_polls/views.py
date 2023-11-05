@@ -102,7 +102,7 @@ def chatgpt(request):
 
 @csrf_exempt
 def scrap(request):
-    url = "https://scrap-example.onrender.com/scraping_2.html"  # Substitua pelo URL da página que você deseja acessar
+    url = "https://scrap-example.onrender.com/scraping.html"  # Substitua pelo URL da página que você deseja acessar
     response = requests.get(url)
 
     # Dataframe com as colunas pré-setadas para criação do arquivo csv
