@@ -1,7 +1,7 @@
 # Inodevs-back-machine-learning
 
 # Local Installation Guide
-To run all this project you need to install the python 3.8, because of the libraries and may need to update your pip to last version.
+To run all this project you need to install the python 3.8, because of the libraries (may need to update your pip to last version).
 ## Tools:
 - [Python](https://www.python.org/downloads/)
 - [Jupiter Notebook](https://www.anaconda.com/download)
@@ -9,32 +9,33 @@ To run all this project you need to install the python 3.8, because of the libra
 ## Local installation manual with virtual environment:
 1. In the main folder, run these commands:
 
+```console
+pip install virtualenv
 ```
-  pip install virtualenv
+```console
+python -m venv env
 ```
+```console
+.\env\Scripts\activate.bat
 ```
-  python -m venv env
+```console
+pip install -r requirements.txt
 ```
+```console
+cd machine_learning
 ```
-  .\env\Scripts\activate.bat
-```
-```
-  cd ../..
-```
-```
-  pip install -r requirements.txt
-```
-```
-  python manage.py runserver
+```console
+python manage.py runserver
 ```
 
 ## Local installation manual without virtual environment:
 1. Run this command in the main folder:
+```console
+pip install -r requirements.txt
 ```
-  pip install -r requirements.txt
+```console
+cd machine_learning
 ```
+```console
+python manage.py runserver
 ```
- python manage.py runserver
-```
-
-
