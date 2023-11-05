@@ -180,11 +180,18 @@ def match(request):
         # df["Pontuacao_Habilidades"] = 0
         # df["Pontuacao_Atitudes"] = 0
 
-        vocabulario = 'adaptabilidade aprender arquitetura banco bootstrap clara comprometimento comunicação css3 dados desenvolvimento disposição entregas equipe estratégica foco gerenciamento html5 javascript jquery js mudanças novas objetiva prazos proatividade problemas programação projetos reactjs resolução resultados software tecnologias teste trabalho ui ux visão vue web'.split(' ')        
+        # Lista de palavras para exemplo do candidato perfeito
+        vocabulario2 = 'adaptabilidade aprender arquitetura banco bootstrap clara comprometimento comunicação css3 dados desenvolvimento disposição entregas equipe estratégica foco gerenciamento html5 javascript jquery js mudanças novas objetiva prazos proatividade problemas programação projetos reactjs resolução resultados software tecnologias teste trabalho ui ux visão vue web'.split(' ')        
 
         # Usar CountVectorizer para contar as ocorrências de palavras-chave nas experiências dos candidatos, fit para treinar o vocabulario de acordo com as 
         # configurações na declaração do vectorizer, transform para aplicar o algoritmo treinado no df alvo
-        matriz_contagens = vectorizer.fit_transform(df["Experiencia"])
+        # matriz_contagens = vectorizer.fit_transform(df["Experiencia"])
+
+        # Matriz exemplo para vocabulario fixo para teste de porcentagem
+        # matriz_contagens = vectorizer.fit(vocabulario2)
+        
+        matriz_contagens = vectorizer.fit(cha_list)
+        matriz_contagens = vectorizer.transform(df["Experiencia"])
 
         # Obter o vocabulário (palavras únicas) resultante do treinamento
         vocabulario = vectorizer.get_feature_names_out()
@@ -251,7 +258,7 @@ def match(request):
                 candidato = Candidato.objects.get(cand_link=row['Link_Candidato'])
 
                 # Crie uma instância da tabela intermediária e associe o candidato e a descrição de cargo
-                # CandidatoVaga.objects.create(vaga=desc, cand=candidato, cand_vaga_rank=x, cand_vaga_pontos_cha=row['Pontuacao_Final'], cand_percent_match=row['Porcentagem'])
+                CandidatoVaga.objects.create(vaga=desc, cand=candidato, cand_vaga_rank=x, cand_vaga_pontos_cha=row['Pontuacao_Final'], cand_percent_match=row['Porcentagem'])
                 
                 print(f"A atualização do candidato {row['Link_Candidato']} foi concluido!")
 
@@ -261,7 +268,7 @@ def match(request):
         return HttpResponse('O arquivo com a classificação foi gerado com sucesso.')
     
     return HttpResponse('Não foi possível encontrar o cargo requerido.')
-
+    
 @csrf_exempt
 def upgrade(request):
 
