@@ -34,7 +34,7 @@ def chatgpt(request):
         nivel = json.loads(request.body.decode('utf-8')).get('nivel')
 
         print(cargo, nivel)
-        if not (Vaga.objects.filter(vaga_nome=cargo) and Vaga.objects.filter(vaga_nivel=nivel)):
+        if not (Vaga.objects.filter(vaga_nome=cargo,vaga_nivel=nivel)):
             nova_descricao = Vaga()
             nova_descricao.vaga_nome = cargo
             nova_descricao.vaga_nivel = nivel
@@ -94,9 +94,10 @@ def chatgpt(request):
 
             descricao_cha['id'] = nova_descricao.vaga_id
 
+            print(descricao_cha)
+
             return HttpResponse(json.dumps(descricao_cha), content_type="application/json")
 
-            # return HttpResponse('Dados salvos com sucesso e descrição CHA gerada.')
         else:
             vaga = get_object_or_404(Vaga, vaga_nome=cargo, vaga_nivel=nivel)
             
@@ -107,14 +108,15 @@ def chatgpt(request):
             atitudes = re.sub(regex, "", vaga.vaga_atitudes).split(",")
 
             descricao = {
-                'Conhecimentos': conhecimentos,
-                'Habilidades': habilidades,
-                'Atitudes': atitudes
+                'Conhecimentos' : conhecimentos,
+                'Habilidades' : habilidades,
+                'Atitudes' : atitudes
             }
             data = {
-                'cargo': cargo,
-                'nivel': nivel,
-                'descricao': descricao
+                'cargo' : cargo,
+                'nivel' : nivel,
+                'descricao' : descricao,
+                'id' : vaga.vaga_id
             }
             return HttpResponse(json.dumps(data), content_type="application/json")
     
@@ -254,7 +256,9 @@ def match(request):
             x+=1
 
             # Declara uma lista de candidatos que ja possuem uma relação com a vaga 
-            registered = CandidatoVaga.objects.raw(f"select * from candidato c left join candidato_vaga cv on c.cand_id = cv.cand_id where c.cand_link = '{row['Link_Candidato']}';")
+            cand_registered = CandidatoVaga.objects.raw(f"select * from candidato c left join candidato_vaga cv on c.cand_id = cv.cand_id where c.cand_link = '{row['Link_Candidato']}';")
+
+            vaga_registered = CandidatoVaga.objects.raw(f"select c.cand_id,	cv.cand_id as relation,	cv.vaga_id as vaga_relation, v.vaga_id, v.vaga_nome from candidato c left join candidato_vaga cv on	c.cand_id = cv.cand_id left join vaga v on v.vaga_id = cv.vaga_id where	v.vaga_nome = '{vaga}';")
 
             if not (Candidato.objects.filter(cand_link=row['Link_Candidato'])):
 
@@ -262,7 +266,6 @@ def match(request):
                 new_candidato.cand_link = row['Link_Candidato']
                 new_candidato.cand_exp = row['Experiencia']
                 new_candidato.save()
-
 
                 # Recupere o candidato correspondente com base no Link_Candidato
                 desc = Vaga.objects.get(vaga_nome=vaga, vaga_nivel=nivel)
@@ -273,26 +276,24 @@ def match(request):
                 
                 print(f"O candidato {row['Link_Candidato']} foi cadastrado com sucesso")
 
-            elif row['Link_Candidato'] in [i.cand_link for i in registered]:
-                print('Candidato ja possui relação com essa vaga, seus dados serão reutilizados para outra empresa.')
-                vaga_id = Vaga.objects.get(vaga_nome=vaga, vaga_nivel=nivel).vaga_id
+            try:            
+                if Candidato.objects.get(cand_link=row['Link_Candidato']):
+                    
+                    # Recupere a descrição correspondente com base no cargo e nível
+                    desc = Vaga.objects.get(vaga_nome=vaga, vaga_nivel=nivel)
+                    
+                    # Recupere o candidato correspondente com base no Link_Candidato
+                    candidato = Candidato.objects.get(cand_link=row['Link_Candidato'])
 
-                continue
-                
-            elif Candidato.objects.get(cand_link=row['Link_Candidato']):
+                    # Crie uma instância da tabela intermediária e associe o candidato e a descrição de cargo
+                    CandidatoVaga.objects.create(vaga=desc, cand=candidato, cand_vaga_rank=x, cand_vaga_pontos_cha=row['Pontuacao_Final'], cand_percent_match=row['Porcentagem'])
+                    
+                    print(f"A atualização do candidato {row['Link_Candidato']} foi concluido!")
 
-                # Recupere a descrição correspondente com base no cargo e nível
-                desc = Vaga.objects.get(vaga_nome=vaga, vaga_nivel=nivel)
-                
-                # Recupere o candidato correspondente com base no Link_Candidato
-                candidato = Candidato.objects.get(cand_link=row['Link_Candidato'])
-
-                # Crie uma instância da tabela intermediária e associe o candidato e a descrição de cargo
-                CandidatoVaga.objects.create(vaga=desc, cand=candidato, cand_vaga_rank=x, cand_vaga_pontos_cha=row['Pontuacao_Final'], cand_percent_match=row['Porcentagem'])
-                
-                print(f"A atualização do candidato {row['Link_Candidato']} foi concluido!")
-
-            return HttpResponse(f"O cadastramento do candidato {row['Link_Candito']} não foi concluido, pois possivelmente houveram dados duplicados.")        
+            except:
+                if row['Link_Candidato'] in [c.cand_link for c in cand_registered] and vaga in [v.vaga_nome for v in vaga_registered]:
+                    print('Candidato ja possui relação com essa vaga, seus dados serão reutilizados para outra empresa.')
+                    continue
 
         return HttpResponse('O arquivo com a classificação foi gerado com sucesso.')
     
