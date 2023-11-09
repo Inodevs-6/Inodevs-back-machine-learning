@@ -13,6 +13,8 @@ import os
 from nltk.corpus import stopwords
 import nltk
 from dotenv import load_dotenv
+from django.shortcuts import get_object_or_404
+import re
 
 load_dotenv()
 
@@ -96,8 +98,26 @@ def chatgpt(request):
 
             # return HttpResponse('Dados salvos com sucesso e descrição CHA gerada.')
         else:
-            return HttpResponse('Erro! A descrição a ser gerada já existe, modifique-a como desejar ou insira um novo cargo/nivel.')
+            vaga = get_object_or_404(Vaga, vaga_nome=cargo, vaga_nivel=nivel)
+            
+            # Usar regex para remover os caracteres indesejados
+            regex = r"['\[\]]"
+            conhecimentos = re.sub(regex, "", vaga.vaga_conhecimentos).split(",")
+            habilidades = re.sub(regex, "", vaga.vaga_habilidades).split(",")
+            atitudes = re.sub(regex, "", vaga.vaga_atitudes).split(",")
 
+            descricao = {
+                'Conhecimentos': conhecimentos,
+                'Habilidades': habilidades,
+                'Atitudes': atitudes
+            }
+            data = {
+                'cargo': cargo,
+                'nivel': nivel,
+                'descricao': descricao
+            }
+            return HttpResponse(json.dumps(data), content_type="application/json")
+    
     return HttpResponse('Erro! O campo cargo ou nivel não foram corretamente preenchidos.')
 
 @csrf_exempt
@@ -232,6 +252,10 @@ def match(request):
         # For para iterar pelo df_total e, se for necessario salvar os candidatos novos e em seguida criar a relação de vaga -> candidato
         for index, row in df_total.iterrows():
             x+=1
+
+            # Declara uma lista de candidatos que ja possuem uma relação com a vaga 
+            registered = CandidatoVaga.objects.raw(f"select * from candidato c left join candidato_vaga cv on c.cand_id = cv.cand_id where c.cand_link = '{row['Link_Candidato']}';")
+
             if not (Candidato.objects.filter(cand_link=row['Link_Candidato'])):
 
                 new_candidato = Candidato()
@@ -249,6 +273,12 @@ def match(request):
                 
                 print(f"O candidato {row['Link_Candidato']} foi cadastrado com sucesso")
 
+            elif row['Link_Candidato'] in [i.cand_link for i in registered]:
+                print('Candidato ja possui relação com essa vaga, seus dados serão reutilizados para outra empresa.')
+                vaga_id = Vaga.objects.get(vaga_nome=vaga, vaga_nivel=nivel).vaga_id
+
+                continue
+                
             elif Candidato.objects.get(cand_link=row['Link_Candidato']):
 
                 # Recupere a descrição correspondente com base no cargo e nível
@@ -262,8 +292,7 @@ def match(request):
                 
                 print(f"A atualização do candidato {row['Link_Candidato']} foi concluido!")
 
-            else:
-                print(f"O cadastramento do candidato {row['Link_Candito']} não foi concluido, pois possivelmente houveram dados duplicados.")        
+            return HttpResponse(f"O cadastramento do candidato {row['Link_Candito']} não foi concluido, pois possivelmente houveram dados duplicados.")        
 
         return HttpResponse('O arquivo com a classificação foi gerado com sucesso.')
     
